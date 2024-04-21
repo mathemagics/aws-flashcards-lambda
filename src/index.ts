@@ -12,18 +12,24 @@ const dynamoDbClient = new DynamoDBClient({ region: 'us-east-2'});
 
 type Flashcard = {key: string, value: string};
 
-export const handler: Handler = async (event, context) => {
-    // Get the object from the event and show its content type
-    const bucket = event.Records[0].s3.bucket.name;
-    const key = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
-    const params = {
-        Bucket: bucket,
-        Key: key,
-    };
+const parseKey = (key: string) => {
     const keyParts = key.split('/');
     const partitionKey = keyParts[1];
     const fileName = keyParts[2];
     const sectionName = fileName.split('.')[0];
+
+    return {partitionKey, sectionName};
+}
+
+export const handler: Handler = async (event, context) => {
+    // Get the object from the event and show its content type
+    const bucket = event.Records[0].s3.bucket.name;
+    const key = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+    const {partitionKey, sectionName} = parseKey(key);
+    const params = {
+        Bucket: bucket,
+        Key: key,
+    };
 
     const flashcards: Flashcard[] = [];
 
@@ -43,9 +49,7 @@ export const handler: Handler = async (event, context) => {
        (Body as Readable).pipe(csv()).pipe(outputStream);
         await finished(outputStream);
     } catch (err) {
-        console.log(err);
         const message = `Error getting object ${key} from bucket ${bucket}.`;
-        console.log(message);
         throw new Error(message);
     }
 
@@ -60,9 +64,7 @@ export const handler: Handler = async (event, context) => {
         }));
         return res
     } catch (err) {
-        console.log(err);
         const message = `Error putting item in DynamoDB table ${tableName}.`;
-        console.log(message);
         throw new Error(message);
     }
 };
