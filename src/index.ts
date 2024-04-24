@@ -34,7 +34,7 @@ export const handler: Handler = async (event, context) => {
         Key: key,
     };
 
-    const flashcards: AttributeValue[] = [];
+    const flashcards: {question: string, answer:string, id:string}[] = [];
 
     try {
         const command = new GetObjectCommand(params);
@@ -61,9 +61,8 @@ export const handler: Handler = async (event, context) => {
             return {
                 M: {
                     id: { S: uuidv4() },
-                    q: { S: Object.keys(row)[0] },
-                    a: { S: Object.values(row)[0] },
-                    row: { S: JSON.stringify(row) }
+                    q: { S: row.question },
+                    a: { S: row.answer },
                 }
             };
         });
