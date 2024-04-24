@@ -15,12 +15,14 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.137",
     "@types/node": "^20.12.7",
+    "@types/uuid": "^9.0.8",
     "esbuild": "^0.20.2",
     "typescript": "^5.4.5"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.556.0",
     "@aws-sdk/client-s3": "^3.556.0",
-    "csv-parser": "^3.0.0"
+    "csv-parser": "^3.0.0",
+    "uuid": "^9.0.1"
   }
 }
