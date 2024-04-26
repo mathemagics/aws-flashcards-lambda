@@ -1,15 +1,17 @@
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { AttributeValue, DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, PutItemCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import csv from 'csv-parser';
 import { Handler } from 'aws-lambda';
 import {Writable, Readable} from 'stream';
 import { finished } from 'stream/promises';
 import { v4 as uuidv4 } from 'uuid';
 
-const tableName = process.env.TABLE_NAME;
+const region = process.env.TABLE_REGION;
+const flashcardsTableName = process.env.FLASHCARDS_TABLE_NAME;
+const certsTableName = process.env.CERTS_TABLE_NAME;
 
-const s3Client = new S3Client({ region: 'us-east-2'});
-const dynamoDbClient = new DynamoDBClient({ region: 'us-east-2'});
+const s3Client = new S3Client({ region });
+const dynamoDbClient = new DynamoDBClient({ region });
 
 type Flashcard = {id: string; q: string, a: string};
 
@@ -57,6 +59,36 @@ export const handler: Handler = async (event, context) => {
     }
 
     try {
+
+        //  Create a new cert in the certs table if it doesn't exist
+        //  Otherwise add a section to the sections list in the existing cert
+
+        const certName = partitionKey.replace(/-/g, " ")
+
+        await dynamoDbClient.send(new UpdateItemCommand({
+            TableName: certsTableName,
+            Key: {
+                cert_id: { S: partitionKey },
+            },
+            UpdateExpression: 'SET cert_name = :certName, sections = list_append(if_not_exists(sections, :empty_list), :section)',
+            ExpressionAttributeValues: {
+                ':section': {
+                    L: [
+                        { S: sectionName }
+                    ]
+                },
+                ':empty_list': {
+                    L: []
+                },
+                ':certName': { S: certName }
+            },
+        }));
+    } catch (err) {
+        const message = `Error putting item in DynamoDB table ${certsTableName}.`;
+        throw new Error(message);
+    }
+
+    try {
         const flashcardList = flashcards.map((row) => {
             return {
                 M: {
@@ -66,17 +98,16 @@ export const handler: Handler = async (event, context) => {
                 }
             };
         });
-        const res = await dynamoDbClient.send(new PutItemCommand({
-            TableName: tableName,
+        await dynamoDbClient.send(new PutItemCommand({
+            TableName: flashcardsTableName,
             Item: {
                 cert_id: { S: partitionKey },
                 section_id: { S: sectionName },
                 flashcards: { L: flashcardList },
             }
         }));
-        return res
     } catch (err) {
-        const message = `Error putting item in DynamoDB table ${tableName}.`;
+        const message = `Error putting item in DynamoDB table ${flashcardsTableName}.`;
         throw new Error(message);
     }
 };
