@@ -36,6 +36,7 @@ export const handler: Handler = async (event, context) => {
         Key: key,
     };
 
+    const certName = partitionKey.replace(/-/g, " ")
     const flashcards: {question: string, answer:string, id:string}[] = [];
 
     try {
@@ -62,8 +63,6 @@ export const handler: Handler = async (event, context) => {
 
         //  Create a new cert in the certs table if it doesn't exist
         //  Otherwise add a section to the sections list in the existing cert
-
-        const certName = partitionKey.replace(/-/g, " ")
 
         await dynamoDbClient.send(new UpdateItemCommand({
             TableName: certsTableName,
@@ -102,6 +101,7 @@ export const handler: Handler = async (event, context) => {
             TableName: flashcardsTableName,
             Item: {
                 cert_id: { S: partitionKey },
+                cert_name: { S: certName },
                 section_id: { S: sectionName },
                 flashcards: { L: flashcardList },
             }
