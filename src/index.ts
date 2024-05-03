@@ -19,15 +19,18 @@ const parseKey = (key: string) => {
     const keyParts = key.split('/');
     const partitionKey = keyParts[1];
     const fileName = keyParts[2];
-    const sectionName = fileName.split('.')[0];
+    const sectionFileName = fileName.split('.')[0];
+    const sectionName = sectionFileName.replace(/\s/g, "-");
 
     return {partitionKey, sectionName};
 }
 
 export const handler: Handler = async (event, context) => {
     // Get the object from the event and show its content type
-    const bucket = event.Records[0].s3.bucket.name;
-    const key = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+    const s3Event = event.Records[0].Sns.Message;
+    const s3EventJson = JSON.parse(s3Event);
+    const bucket = s3EventJson.Records[0].s3.bucket.name;
+    const key = decodeURIComponent(s3EventJson.Records[0].s3.object.key.replace(/\+/g, ' '));
 
     const {partitionKey, sectionName} = parseKey(key);
 
@@ -92,8 +95,8 @@ export const handler: Handler = async (event, context) => {
             return {
                 M: {
                     id: { S: uuidv4() },
-                    q: { S: row.question },
-                    a: { S: row.answer },
+                    q: { S: row.question.replace(/[\n\r\t\b\f]/g, ' ') },
+                    a: { S: row.answer.replace(/[\n\r\t\b\f]/g, ' ') },
                 }
             };
         });
