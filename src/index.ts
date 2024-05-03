@@ -110,7 +110,7 @@ export const handler: Handler = async (event, context) => {
             }
         }));
     } catch (err) {
-        const message = `Error putting item in DynamoDB table ${flashcardsTableName}.`;
+        const message = `Error putting item in DynamoDB table ${flashcardsTableName}. Error: ${err}`;
         throw new Error(message);
     }
 };
