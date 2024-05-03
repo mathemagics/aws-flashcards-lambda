@@ -26,7 +26,6 @@ const parseKey = (key: string) => {
 }
 
 export const handler: Handler = async (event, context) => {
-    // Get the object from the event and show its content type
     const s3Event = event.Records[0].Sns.Message;
     const s3EventJson = JSON.parse(s3Event);
     const bucket = s3EventJson.Records[0].s3.bucket.name;
